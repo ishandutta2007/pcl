@@ -48,10 +48,7 @@ using namespace pcl::io::openni2;
 using openni::VideoMode;
 using std::vector;
 
-pcl::io::openni2::OpenNI2Device::OpenNI2Device (const std::string& device_URI) :
-  ir_video_started_(false),
-  color_video_started_(false),
-  depth_video_started_(false)
+pcl::io::openni2::OpenNI2Device::OpenNI2Device (const std::string& device_URI)
 {
   openni::Status status = openni::OpenNI::initialize ();
   if (status != openni::STATUS_OK)
@@ -59,7 +56,7 @@ pcl::io::openni2::OpenNI2Device::OpenNI2Device (const std::string& device_URI) :
 
   openni_device_.reset (new openni::Device);
 
-  if (device_URI.length () > 0)
+  if (!device_URI.empty())
     status = openni_device_->open (device_URI.c_str ());
   else
     status = openni_device_->open (openni::ANY_DEVICE);
@@ -218,8 +215,8 @@ pcl::io::openni2::OpenNI2Device::isIRVideoModeSupported (const OpenNI2VideoMode&
 
   bool supported = false;
 
-  std::vector<OpenNI2VideoMode>::const_iterator it = ir_video_modes_.begin ();
-  std::vector<OpenNI2VideoMode>::const_iterator it_end = ir_video_modes_.end ();
+  auto it = ir_video_modes_.cbegin ();
+  auto it_end = ir_video_modes_.cend ();
 
   while (it != it_end && !supported)
   {
@@ -237,8 +234,8 @@ pcl::io::openni2::OpenNI2Device::isColorVideoModeSupported (const OpenNI2VideoMo
 
   bool supported = false;
 
-  std::vector<OpenNI2VideoMode>::const_iterator it = color_video_modes_.begin ();
-  std::vector<OpenNI2VideoMode>::const_iterator it_end = color_video_modes_.end ();
+  auto it = color_video_modes_.cbegin ();
+  auto it_end = color_video_modes_.cend ();
 
   while (it != it_end && !supported)
   {
@@ -256,8 +253,8 @@ pcl::io::openni2::OpenNI2Device::isDepthVideoModeSupported (const OpenNI2VideoMo
 
   bool supported = false;
 
-  std::vector<OpenNI2VideoMode>::const_iterator it = depth_video_modes_.begin ();
-  std::vector<OpenNI2VideoMode>::const_iterator it_end = depth_video_modes_.end ();
+  auto it = depth_video_modes_.cbegin ();
+  auto it_end = depth_video_modes_.cend ();
 
   while (it != it_end && !supported)
   {

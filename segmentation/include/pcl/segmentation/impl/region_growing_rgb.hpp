@@ -50,10 +50,6 @@
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 template <typename PointT, typename NormalT>
 pcl::RegionGrowingRGB<PointT, NormalT>::RegionGrowingRGB () :
-  color_p2p_threshold_ (1225.0f),
-  color_r2r_threshold_ (10.0f),
-  distance_threshold_ (0.05f),
-  region_neighbour_number_ (100),
   point_distances_ (0),
   segment_neighbours_ (0),
   segment_distances_ (0),
@@ -342,7 +338,7 @@ pcl::RegionGrowingRGB<PointT, NormalT>::findRegionsKNN (pcl::index_t index, pcl:
   {
     if (distances[i_seg] < max_dist)
     {
-      segment_neighbours.push (std::make_pair (distances[i_seg], i_seg) );
+      segment_neighbours.emplace (distances[i_seg], i_seg);
       if (segment_neighbours.size () > nghbr_number)
         segment_neighbours.pop ();
     }

@@ -2,27 +2,15 @@ set(SUBSYS_NAME visualization)
 set(SUBSYS_DESC "Point cloud visualization library")
 set(SUBSYS_DEPS common io kdtree geometry search octree)
 
-if(NOT VTK_FOUND)
-  set(DEFAULT FALSE)
-  set(REASON "VTK was not found.")
-else()
-  set(DEFAULT TRUE)
-  set(REASON)
-  include_directories("${CMAKE_CURRENT_SOURCE_DIR}/include")
-endif()
-
-PCL_SUBSYS_OPTION(build "${SUBSYS_NAME}" "${SUBSYS_DESC}" ${DEFAULT} "${REASON}")
+PCL_SUBSYS_OPTION(build "${SUBSYS_NAME}" "${SUBSYS_DESC}" ON)
 PCL_SUBSYS_DEPEND(build NAME ${SUBSYS_NAME} DEPS ${SUBSYS_DEPS} EXT_DEPS vtk OPT_DEPS openni openni2 ensenso davidSDK dssdk rssdk)
 
 if(ANDROID)
-  set(build FALSE)
   message("VTK was found, but cannot be compiled for Android. Please use VES instead.")
+  return()
 endif()
 
 if(OPENGL_FOUND)
-  if(OPENGL_INCLUDE_DIR)
-    include_directories(SYSTEM "${OPENGL_INCLUDE_DIR}")
-  endif()
   if(OPENGL_DEFINITIONS)
     add_definitions("${OPENGL_DEFINITIONS}")
   endif()
@@ -69,7 +57,6 @@ if(NOT (${VTK_VERSION} VERSION_LESS 9.0))
 endif()
 
 set(incs
-  "include/pcl/${SUBSYS_NAME}/eigen.h"
   "include/pcl/${SUBSYS_NAME}/boost.h"
   "include/pcl/${SUBSYS_NAME}/cloud_viewer.h"
   "include/pcl/${SUBSYS_NAME}/histogram_visualizer.h"
@@ -87,7 +74,6 @@ set(incs
   "include/pcl/${SUBSYS_NAME}/mouse_event.h"
   "include/pcl/${SUBSYS_NAME}/window.h"
   "include/pcl/${SUBSYS_NAME}/range_image_visualizer.h"
-  "include/pcl/${SUBSYS_NAME}/vtk.h"
   "include/pcl/${SUBSYS_NAME}/simple_buffer_visualizer.h"
   "include/pcl/${SUBSYS_NAME}/pcl_plotter.h"
   "include/pcl/${SUBSYS_NAME}/qvtk_compatibility.h"

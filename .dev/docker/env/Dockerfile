@@ -34,9 +34,12 @@ RUN apt-get update \
       libboost-filesystem-dev \
       libboost-iostreams-dev \
       libboost-system-dev \
+      libcjson-dev \
       libflann-dev \
       libglew-dev \
+      freeglut3-dev \
       libgtest-dev \
+      libomp-dev \
       libopenni-dev \
       libopenni2-dev \
       libpcap-dev \

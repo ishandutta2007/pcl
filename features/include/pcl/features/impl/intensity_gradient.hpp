@@ -43,6 +43,7 @@
 #include <pcl/features/intensity_gradient.h>
 
 #include <pcl/common/point_tests.h> // for pcl::isFinite
+#include <pcl/common/eigen.h> // for eigen33
 
 
 //////////////////////////////////////////////////////////////////////////////////////////////
@@ -147,6 +148,13 @@ pcl::IntensityGradientEstimation<PointInT, PointNT, PointOutT, IntensitySelector
   pcl::Indices nn_indices (k_);
   std::vector<float> nn_dists (k_);
   output.is_dense = true;
+
+#ifdef _OPENMP
+  if (threads_ == 0) {
+    threads_ = omp_get_num_procs();
+    PCL_DEBUG ("[pcl::IntensityGradientEstimation::computeFeature] Setting number of threads to %u.\n", threads_);
+  }
+#endif // _OPENMP
 
   // If the data is dense, we don't need to check for NaN
   if (surface_->is_dense)

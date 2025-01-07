@@ -45,8 +45,21 @@ set(PCL_QHULL_REQUIRED_TYPE "DONTCARE" CACHE STRING "Select build type to use ST
 set_property(CACHE PCL_QHULL_REQUIRED_TYPE PROPERTY STRINGS DONTCARE SHARED STATIC)
 mark_as_advanced(PCL_QHULL_REQUIRED_TYPE)
 
+option(PCL_PREFER_BOOST_FILESYSTEM "Prefer boost::filesystem over std::filesystem (if compiled as C++17 or higher, std::filesystem is chosen by default)" OFF)
+mark_as_advanced(PCL_PREFER_BOOST_FILESYSTEM)
+
+set(PCL_XYZ_POINT_TYPES "(pcl::PointXYZ)(pcl::PointXYZI)(pcl::PointXYZL)(pcl::PointXYZRGBA)(pcl::PointXYZRGB)(pcl::PointXYZRGBL)(pcl::PointXYZLAB)(pcl::PointXYZHSV)(pcl::InterestPoint)(pcl::PointNormal)(pcl::PointXYZRGBNormal)(pcl::PointXYZINormal)(pcl::PointXYZLNormal)(pcl::PointWithRange)(pcl::PointWithViewpoint)(pcl::PointWithScale)(pcl::PointSurfel)(pcl::PointDEM)" CACHE STRING "Point types with xyz information for which PCL classes will be instantiated. Alternative to PCL_ONLY_CORE_POINT_TYPES. You can remove unneeded types to reduce compile time and library size.")
+mark_as_advanced(PCL_XYZ_POINT_TYPES)
+
+set(PCL_NORMAL_POINT_TYPES "(pcl::Normal)(pcl::PointNormal)(pcl::PointXYZRGBNormal)(pcl::PointXYZINormal)(pcl::PointXYZLNormal)(pcl::PointSurfel)" CACHE STRING "Point types with normal information for which PCL classes will be instantiated. Alternative to PCL_ONLY_CORE_POINT_TYPES. You can remove unneeded types to reduce compile time and library size.")
+mark_as_advanced(PCL_NORMAL_POINT_TYPES)
+
 # Precompile for a minimal set of point types instead of all.
+if(CMAKE_COMPILER_IS_MSVC OR CMAKE_COMPILER_IS_MINGW)
+option(PCL_ONLY_CORE_POINT_TYPES "Compile explicitly only for a small subset of point types (e.g., pcl::PointXYZ instead of PCL_XYZ_POINT_TYPES)." ON)
+else()
 option(PCL_ONLY_CORE_POINT_TYPES "Compile explicitly only for a small subset of point types (e.g., pcl::PointXYZ instead of PCL_XYZ_POINT_TYPES)." OFF)
+endif()
 mark_as_advanced(PCL_ONLY_CORE_POINT_TYPES)
 
 # Precompile for a minimal set of point types instead of all.
@@ -88,8 +101,6 @@ mark_as_advanced(CMAKE_MSVC_CODE_LINK_OPTIMIZATION)
 # Project folders
 set_property(GLOBAL PROPERTY USE_FOLDERS ON)
 
-option(BUILD_tools "Useful PCL-based command line tools" ON)
-
 option(WITH_DOCS "Build doxygen documentation" OFF)
 
 # set index size
@@ -111,3 +122,11 @@ option(PCL_DISABLE_GPU_TESTS "Disable running GPU tests. If disabled, tests will
 # Set whether visualizations tests should be run
 # (Used to prevent visualizations tests from executing in CI where visualization is unavailable)
 option(PCL_DISABLE_VISUALIZATION_TESTS "Disable running visualizations tests. If disabled, tests will still be built." OFF)
+
+# This leads to smaller libraries, possibly faster code, and fixes some bugs. See https://gcc.gnu.org/wiki/Visibility
+option(PCL_SYMBOL_VISIBILITY_HIDDEN "Hide all binary symbols by default, export only those explicitly marked (gcc and clang only). Experimental!" OFF)
+mark_as_advanced(PCL_SYMBOL_VISIBILITY_HIDDEN)
+if(PCL_SYMBOL_VISIBILITY_HIDDEN)
+  set(CMAKE_CXX_VISIBILITY_PRESET hidden)
+  set(CMAKE_VISIBILITY_INLINES_HIDDEN ON)
+endif()

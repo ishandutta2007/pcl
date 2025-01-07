@@ -46,6 +46,28 @@
 namespace pcl {
 
 template <typename PointSource, typename PointTarget, typename Scalar>
+void
+GeneralizedIterativeClosestPoint<PointSource, PointTarget, Scalar>::setNumberOfThreads(
+    unsigned int nr_threads)
+{
+#ifdef _OPENMP
+  if (nr_threads == 0)
+    threads_ = omp_get_num_procs();
+  else
+    threads_ = nr_threads;
+  PCL_DEBUG("[pcl::GeneralizedIterativeClosestPoint::setNumberOfThreads] Setting "
+            "number of threads to %u.\n",
+            threads_);
+#else
+  threads_ = 1;
+  if (nr_threads != 1)
+    PCL_WARN("[pcl::GeneralizedIterativeClosestPoint::setNumberOfThreads] "
+             "Parallelization is requested, but OpenMP is not available! Continuing "
+             "without parallelization.\n");
+#endif // _OPENMP
+}
+
+template <typename PointSource, typename PointTarget, typename Scalar>
 template <typename PointT>
 void
 GeneralizedIterativeClosestPoint<PointSource, PointTarget, Scalar>::computeCovariances(
@@ -62,6 +84,7 @@ GeneralizedIterativeClosestPoint<PointSource, PointTarget, Scalar>::computeCovar
   }
 
   Eigen::Vector3d mean;
+  Eigen::Matrix3d cov;
   pcl::Indices nn_indices(k_correspondences_);
   std::vector<float> nn_dist_sq(k_correspondences_);
 
@@ -69,11 +92,10 @@ GeneralizedIterativeClosestPoint<PointSource, PointTarget, Scalar>::computeCovar
   if (cloud_covariances.size() < cloud->size())
     cloud_covariances.resize(cloud->size());
 
-  auto matrices_iterator = cloud_covariances.begin();
-  for (auto points_iterator = cloud->begin(); points_iterator != cloud->end();
-       ++points_iterator, ++matrices_iterator) {
-    const PointT& query_point = *points_iterator;
-    Eigen::Matrix3d& cov = *matrices_iterator;
+#pragma omp parallel for num_threads(threads_) schedule(dynamic, 32)                   \
+    shared(cloud, cloud_covariances) firstprivate(mean, cov, nn_indices, nn_dist_sq)
+  for (std::ptrdiff_t i = 0; i < static_cast<std::ptrdiff_t>(cloud->size()); ++i) {
+    const PointT& query_point = (*cloud)[i];
     // Zero out the cov and mean
     cov.setZero();
     mean.setZero();
@@ -124,6 +146,7 @@ GeneralizedIterativeClosestPoint<PointSource, PointTarget, Scalar>::computeCovar
         v = gicp_epsilon_;
       cov += v * col * col.transpose();
     }
+    cloud_covariances[i] = cov;
   }
 }
 
@@ -635,9 +658,9 @@ GeneralizedIterativeClosestPoint<PointSource, PointTarget, Scalar>::
                             p_trans_src[1] - p_tgt[1],
                             p_trans_src[2] - p_tgt[2]);
     const Eigen::Matrix3d& M = gicp_->mahalanobis(src_idx);
-    const Eigen::Vector3d Md(M * d); // Md = M*d
-    gradient.head<3>() += Md;        // translation gradient
-    hessian.block<3, 3>(0, 0) += M;  // translation-translation hessian
+    const Eigen::Vector3d Md(M * d);    // Md = M*d
+    gradient.head<3>() += Md;           // translation gradient
+    hessian.topLeftCorner<3, 3>() += M; // translation-translation hessian
     p_trans_src = base_transformation_float * p_src;
     const Eigen::Vector3d p_base_src(p_trans_src[0], p_trans_src[1], p_trans_src[2]);
     dCost_dR_T.noalias() += p_base_src * Md.transpose();
@@ -657,7 +680,7 @@ GeneralizedIterativeClosestPoint<PointSource, PointTarget, Scalar>::
   gradient.head<3>() *= 2.0 / m; // translation gradient
   dCost_dR_T *= 2.0 / m;
   gicp_->computeRDerivative(x, dCost_dR_T, gradient); // rotation gradient
-  hessian.block<3, 3>(0, 0) *= 2.0 / m;               // translation-translation hessian
+  hessian.topLeftCorner<3, 3>() *= 2.0 / m;           // translation-translation hessian
   // translation-rotation hessian
   dCost_dR_T1.row(0) = dCost_dR_T1b.col(0);
   dCost_dR_T1.row(1) = dCost_dR_T2b.col(0);

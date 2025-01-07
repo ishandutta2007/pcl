@@ -2,7 +2,6 @@ set(SUBSYS_NAME filters)
 set(SUBSYS_DESC "Point cloud filters library")
 set(SUBSYS_DEPS common sample_consensus search kdtree octree)
 
-set(build TRUE)
 PCL_SUBSYS_OPTION(build "${SUBSYS_NAME}" "${SUBSYS_DESC}" ON)
 PCL_SUBSYS_DEPEND(build NAME ${SUBSYS_NAME} DEPS ${SUBSYS_DEPS} OPT_DEPS OpenMP)
 
@@ -50,7 +49,6 @@ set(srcs
 )
 
 set(incs
-  "include/pcl/${SUBSYS_NAME}/boost.h"
   "include/pcl/${SUBSYS_NAME}/conditional_removal.h"
   "include/pcl/${SUBSYS_NAME}/crop_box.h"
   "include/pcl/${SUBSYS_NAME}/clipper3D.h"
@@ -132,7 +130,6 @@ set(impl_incs
 )
 
 set(LIB_NAME "pcl_${SUBSYS_NAME}")
-include_directories("${CMAKE_CURRENT_SOURCE_DIR}/include")
 PCL_ADD_LIBRARY(${LIB_NAME} COMPONENT ${SUBSYS_NAME} SOURCES ${srcs} ${incs} ${impl_incs})
 target_link_libraries("${LIB_NAME}" pcl_common pcl_sample_consensus pcl_search pcl_kdtree pcl_octree)
 PCL_MAKE_PKGCONFIG(${LIB_NAME} COMPONENT ${SUBSYS_NAME} DESC ${SUBSYS_DESC} PCL_DEPS ${SUBSYS_DEPS})

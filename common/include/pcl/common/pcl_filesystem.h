@@ -2,8 +2,7 @@
  * Software License Agreement (BSD License)
  *
  *  Point Cloud Library (PCL) - www.pointclouds.org
- *  Copyright (c) 2011-2012, Willow Garage, Inc.
- *  Copyright (c) 2012-, Open Perception, Inc.
+ *  Copyright (C) 2024 Kino <cybao292261@163.com>
  *
  *  All rights reserved.
  *
@@ -33,13 +32,20 @@
  *  LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN
  *  ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
  *  POSSIBILITY OF SUCH DAMAGE.
+ *
+ * $Id$
  */
 
 #pragma once
 
-#if defined __GNUC__
-#  pragma GCC system_header 
-#endif
-PCL_DEPRECATED_HEADER(1, 15, "Please include the needed eigen headers directly.")
+#include <pcl/pcl_config.h> // for PCL_PREFER_BOOST_FILESYSTEM
 
-#include <Eigen/Core>
+#if (__cplusplus >= 201703L) && !defined(PCL_PREFER_BOOST_FILESYSTEM)
+#define PCL_USING_STD_FILESYSTEM
+#include <filesystem>
+namespace pcl_fs = std::filesystem;
+#else
+#define PCL_USING_BOOST_FILESYSTEM
+#include <boost/filesystem.hpp>
+namespace pcl_fs = boost::filesystem;
+#endif

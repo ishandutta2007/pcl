@@ -47,7 +47,8 @@
 #include <pcl/registration/transformation_estimation_point_to_plane_lls.h>
 #include <pcl/registration/transformation_estimation_svd.h>
 #include <pcl/registration/transformation_estimation_symmetric_point_to_plane_lls.h>
-#include <pcl/memory.h> // for dynamic_pointer_cast, pcl::make_shared, shared_ptr
+#include <pcl/memory.h>     // for dynamic_pointer_cast, pcl::make_shared, shared_ptr
+#include <pcl/pcl_config.h> // for PCL_NO_PRECOMPILE
 
 namespace pcl {
 /** \brief @b IterativeClosestPoint provides a base implementation of the Iterative
@@ -260,6 +261,16 @@ public:
     return (use_reciprocal_correspondence_);
   }
 
+  /** \brief Set the number of threads to use.
+   * \param nr_threads the number of hardware threads to use (0 sets the value back to
+   * automatic)
+   */
+  void
+  setNumberOfThreads(unsigned int nr_threads)
+  {
+    correspondence_estimation_->setNumberOfThreads(nr_threads);
+  }
+
 protected:
   /** \brief Apply a rigid transform to a given dataset. Here we check whether
    * the dataset has surface normals in addition to XYZ, and rotate normals as well.
@@ -447,3 +458,9 @@ protected:
 } // namespace pcl
 
 #include <pcl/registration/impl/icp.hpp>
+
+#if !defined(PCL_NO_PRECOMPILE) && !defined(PCL_REGISTRATION_ICP_CPP_)
+extern template class pcl::IterativeClosestPoint<pcl::PointXYZ, pcl::PointXYZ>;
+extern template class pcl::IterativeClosestPoint<pcl::PointXYZI, pcl::PointXYZI>;
+extern template class pcl::IterativeClosestPoint<pcl::PointXYZRGB, pcl::PointXYZRGB>;
+#endif // PCL_NO_PRECOMPILE

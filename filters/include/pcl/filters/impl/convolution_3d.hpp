@@ -40,10 +40,12 @@
 #ifndef PCL_FILTERS_CONVOLUTION_3D_IMPL_HPP
 #define PCL_FILTERS_CONVOLUTION_3D_IMPL_HPP
 
+#include <pcl/common/point_tests.h> // for isFinite
 #include <pcl/search/organized.h>
 #include <pcl/search/kdtree.h>
 #include <pcl/pcl_config.h>
 #include <pcl/point_types.h>
+#include <pcl/common/point_tests.h>
 
 #include <cmath>
 #include <cstdint>
@@ -247,7 +249,8 @@ pcl::filters::Convolution3D<PointInT, PointOutT, KernelT>::convolve (PointCloudO
   default(none) \
   shared(output) \
   firstprivate(nn_indices, nn_distances) \
-  num_threads(threads_)
+  num_threads(threads_) \
+  schedule(dynamic, 64)
   for (std::int64_t point_idx = 0; point_idx < static_cast<std::int64_t> (surface_->size ()); ++point_idx)
   {
     const PointInT& point_in = surface_->points [point_idx];

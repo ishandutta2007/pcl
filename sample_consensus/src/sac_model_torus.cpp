@@ -1,8 +1,7 @@
 /*
  * Software License Agreement (BSD License)
- *
  *  Point Cloud Library (PCL) - www.pointclouds.org
- *  Copyright (c) 2010-2011, Willow Garage, Inc.
+ *  Copyright (c) 2009-2012, Willow Garage, Inc.
  *  Copyright (c) 2012-, Open Perception, Inc.
  *
  *  All rights reserved.
@@ -36,18 +35,11 @@
  *
  */
 
-#pragma once
+#include <pcl/sample_consensus/impl/sac_model_torus.hpp>
 
-#ifdef __GNUC__
-#pragma GCC system_header 
-#endif
-PCL_DEPRECATED_HEADER(1, 15, "Please include the needed boost headers directly.")
+#ifndef PCL_NO_PRECOMPILE
+#include <pcl/impl/instantiate.hpp>
+#include <pcl/point_types.h>
+PCL_INSTANTIATE_PRODUCT(SampleConsensusModelTorus, ((pcl::PointXYZ)(pcl::PointXYZI)(pcl::PointXYZRGBA)(pcl::PointXYZRGB))((pcl::Normal)))
+#endif    // PCL_NO_PRECOMPILE
 
-#ifndef Q_MOC_RUN
-// Marking all Boost headers as system headers to remove warnings
-#include <boost/fusion/sequence/intrinsic/at_key.hpp>
-#include <boost/mpl/size.hpp>
-#include <boost/signals2.hpp>
-#include <boost/signals2/slot.hpp>
-#include <boost/algorithm/string.hpp>
-#endif

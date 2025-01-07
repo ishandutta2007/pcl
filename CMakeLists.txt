@@ -1,19 +1,23 @@
 ### ---[ PCL global CMake
-cmake_minimum_required(VERSION 3.10 FATAL_ERROR)
-
-if(POLICY CMP0074)
-  # 1. Remove with 3.12.4.
-  # 2. Remove search paths with *_ROOT since they will be automatically checked
-  cmake_policy(SET CMP0074 NEW)
-endif()
+cmake_minimum_required(VERSION 3.16.3 FATAL_ERROR)
 
 # Set target C++ standard and required compiler features
-set(CMAKE_CXX_STANDARD 14 CACHE STRING "The target C++ standard. PCL requires C++14 or higher.")
+set(CMAKE_CXX_STANDARD 17 CACHE STRING "The target C++ standard. PCL requires C++14 or higher.")
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
-set(PCL_CXX_COMPILE_FEATURES cxx_std_14)
+if("${CMAKE_CXX_STANDARD}" GREATER_EQUAL 17)
+  set(PCL_CXX_COMPILE_FEATURES cxx_std_17)
+  set(PCL__cplusplus 201703L)
+  set(PCL_REQUIRES_MSC_VER 1912)
+elseif("${CMAKE_CXX_STANDARD}" EQUAL 14)
+  set(PCL_CXX_COMPILE_FEATURES cxx_std_14)
+  set(PCL__cplusplus 201402L)
+  set(PCL_REQUIRES_MSC_VER 1900)
+else()
+  message(FATAL_ERROR "Unknown or unsupported C++ standard specified")
+endif()
 
-set(CMAKE_CUDA_STANDARD 14 CACHE STRING "The target CUDA/C++ standard. PCL requires CUDA/C++ 14 or higher.")
+set(CMAKE_CUDA_STANDARD 17 CACHE STRING "The target CUDA/C++ standard. PCL requires CUDA/C++ 14 or higher.")
 set(CMAKE_CUDA_STANDARD_REQUIRED ON)
 
 set(CMAKE_CONFIGURATION_TYPES "Debug;Release" CACHE STRING "possible configurations" FORCE)
@@ -23,7 +27,7 @@ if("${CMAKE_BUILD_TYPE}" STREQUAL "")
   set(CMAKE_BUILD_TYPE RelWithDebInfo CACHE STRING "build type default to RelWithDebInfo, set to Release to improve performance" FORCE)
 endif()
 
-project(PCL VERSION 1.13.1.99)
+project(PCL VERSION 1.14.1.99)
 string(TOLOWER ${PROJECT_NAME} PROJECT_NAME_LOWER)
 
 if(MSVC AND ("${MSVC_VERSION}" LESS 1910))
@@ -78,7 +82,8 @@ ENDIF()
 # Create a variable with expected default CXX flags
 # This will be used further down the road to check if the user explicitly provided CXX flags
 if(CMAKE_COMPILER_IS_MSVC)
-  set(CMAKE_CXX_FLAGS_DEFAULT "/DWIN32 /D_WINDOWS /W3 /GR /EHsc")
+  set(CMAKE_CXX_FLAGS_DEFAULT ${CMAKE_CXX_FLAGS_INIT})
+  string(STRIP ${CMAKE_CXX_FLAGS_DEFAULT} CMAKE_CXX_FLAGS_DEFAULT)
 else()
   set(CMAKE_CXX_FLAGS_DEFAULT "")
 endif()
@@ -111,11 +116,18 @@ if(PCL_ENABLE_AVX AND "${CMAKE_CXX_FLAGS}" STREQUAL "${CMAKE_CXX_FLAGS_DEFAULT}"
   PCL_CHECK_FOR_AVX()
 endif()
 
+# Cuda
+option(WITH_CUDA "Build NVIDIA-CUDA support" TRUE)
+if(WITH_CUDA)
+  include("${PCL_SOURCE_DIR}/cmake/pcl_find_cuda.cmake")
+endif()
+
+
 # ---[ Unix/Darwin/Windows specific flags
 if(CMAKE_COMPILER_IS_GNUCXX)
   if("${CMAKE_CXX_FLAGS}" STREQUAL "${CMAKE_CXX_FLAGS_DEFAULT}")
     if (CMAKE_CXX_COMPILER_VERSION VERSION_GREATER 7)
-      string(APPEND CMAKE_CXX_FLAGS " -Wabi=11")
+      string(APPEND CMAKE_CXX_FLAGS " -Wabi=18")
     else()
       string(APPEND CMAKE_CXX_FLAGS " -Wabi")
     endif()
@@ -144,20 +156,26 @@ if(CMAKE_COMPILER_IS_GNUCXX)
 endif()
 
 if(CMAKE_COMPILER_IS_MSVC)
-  add_definitions("-DBOOST_ALL_NO_LIB -D_SCL_SECURE_NO_WARNINGS -D_CRT_SECURE_NO_WARNINGS -DNOMINMAX -DPCL_ONLY_CORE_POINT_TYPES ${SSE_DEFINITIONS}")
-  
+  add_definitions("-DBOOST_ALL_NO_LIB -D_SCL_SECURE_NO_WARNINGS -D_CRT_SECURE_NO_WARNINGS -DNOMINMAX ${SSE_DEFINITIONS}")
+
   if("${CMAKE_CXX_FLAGS}" STREQUAL "${CMAKE_CXX_FLAGS_DEFAULT}")
+    
     string(APPEND CMAKE_CXX_FLAGS " /fp:precise ${SSE_FLAGS} ${AVX_FLAGS}")
+    set(CMAKE_CUDA_FLAGS "${CMAKE_CUDA_FLAGS} -Xcompiler=/bigobj")
+
+    set(PCL_USE_GLOBAL_OPTIMIZATION TRUE)
+    if(CUDA_FOUND)
+      if(${CUDA_VERSION_STRING} VERSION_GREATER_EQUAL "10.0" AND ${CUDA_VERSION_STRING} VERSION_LESS "12.0")
+        set(PCL_USE_GLOBAL_OPTIMIZATION FALSE)
+        message("Global optimizations /GL has been turned off, as it doesn't work with nvcc/thrust in CUDA 10 and 11.")
+      endif()
+    endif()
 
     # Add extra code generation/link optimizations
-    if(CMAKE_MSVC_CODE_LINK_OPTIMIZATION AND (NOT BUILD_CUDA) AND (NOT BUILD_GPU))
+    if(CMAKE_MSVC_CODE_LINK_OPTIMIZATION AND PCL_USE_GLOBAL_OPTIMIZATION)
       string(APPEND CMAKE_CXX_FLAGS_RELEASE " /GL")
       string(APPEND CMAKE_SHARED_LINKER_FLAGS_RELEASE " /LTCG /OPT:REF")
       string(APPEND CMAKE_EXE_LINKER_FLAGS_RELEASE " /LTCG")
-    else()
-      set(CMAKE_CUDA_FLAGS "${CMAKE_CUDA_FLAGS} -Xcompiler=/bigobj")
-      
-      message("Global optimizations /GL has been turned off, as it doesn't work with nvcc/thrust")
     endif()
     # /MANIFEST:NO") # please, don't disable manifest generation, otherwise crash at start for vs2008
 
@@ -182,24 +200,13 @@ if(CMAKE_COMPILER_IS_MSVC)
     include(ProcessorCount)
     ProcessorCount(CPUCores)
     set(MSVC_MP ${CPUCores} CACHE STRING "Number of simultaneously running compilers (0 = automatic detection by MSVC). See documentation of /MP flag.")
-    if (CMAKE_VERSION VERSION_LESS 3.11.0)
-      # Usage of COMPILE_LANGUAGE generator expression for MSVC in add_compile_options requires at least CMake 3.11, see https://gitlab.kitware.com/cmake/cmake/issues/17435
-      if(MSVC_MP EQUAL 0)
-        # MSVC_MP is 0 in case the information cannot be determined by ProcessorCount => fallback
-        string(APPEND CMAKE_C_FLAGS " /MP")
-        string(APPEND CMAKE_CXX_FLAGS " /MP")
-      elseif(MSVC_MP GREATER 1)
-        string(APPEND CMAKE_C_FLAGS " /MP${MSVC_MP}")
-        string(APPEND CMAKE_CXX_FLAGS " /MP${MSVC_MP}")
-      endif()      
-    else()      
-      if(MSVC_MP EQUAL 0)
-        # MSVC_MP is 0 in case the information cannot be determined by ProcessorCount => fallback
-        # Generator expression is necessary to limit /MP flag to C/CXX, so flag will be not set to e.g. CUDA (see https://gitlab.kitware.com/cmake/cmake/issues/17535)
-        add_compile_options($<$<OR:$<COMPILE_LANGUAGE:C>,$<COMPILE_LANGUAGE:CXX>>:/MP>)
-      elseif(MSVC_MP GREATER 1)
-        add_compile_options($<$<OR:$<COMPILE_LANGUAGE:C>,$<COMPILE_LANGUAGE:CXX>>:/MP${MSVC_MP}>)
-      endif()
+    
+    if(MSVC_MP EQUAL 0)
+      # MSVC_MP is 0 in case the information cannot be determined by ProcessorCount => fallback
+      # Generator expression is necessary to limit /MP flag to C/CXX, so flag will be not set to e.g. CUDA (see https://gitlab.kitware.com/cmake/cmake/issues/17535)
+      add_compile_options($<$<OR:$<COMPILE_LANGUAGE:C>,$<COMPILE_LANGUAGE:CXX>>:/MP>)
+    elseif(MSVC_MP GREATER 1)
+      add_compile_options($<$<OR:$<COMPILE_LANGUAGE:C>,$<COMPILE_LANGUAGE:CXX>>:/MP${MSVC_MP}>)
     endif()
   endif()
   string(APPEND CMAKE_CXX_FLAGS " /bigobj")
@@ -232,10 +239,6 @@ if(CMAKE_COMPILER_IS_CLANG)
   set(CLANG_LIBRARIES "stdc++")
 endif()
 
-if(CMAKE_COMPILER_IS_MINGW)
-  add_definitions(-DPCL_ONLY_CORE_POINT_TYPES)
-endif()
-
 include("${PCL_SOURCE_DIR}/cmake/pcl_utils.cmake")
 DISSECT_VERSION()
 GET_OS_INFO()
@@ -248,8 +251,8 @@ endif()
 
 set(PCL_OUTPUT_LIB_DIR "${PCL_BINARY_DIR}/${LIB_INSTALL_DIR}")
 set(PCL_OUTPUT_BIN_DIR "${PCL_BINARY_DIR}/${BIN_INSTALL_DIR}")
-make_directory("${PCL_OUTPUT_LIB_DIR}")
-make_directory("${PCL_OUTPUT_BIN_DIR}")
+file(MAKE_DIRECTORY "${PCL_OUTPUT_LIB_DIR}")
+file(MAKE_DIRECTORY "${PCL_OUTPUT_BIN_DIR}")
 set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY "${PCL_OUTPUT_LIB_DIR}")
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY "${PCL_OUTPUT_BIN_DIR}")
 if(WIN32)
@@ -296,8 +299,24 @@ endif()
 
 # OpenMP (optional)
 option(WITH_OPENMP "Build with parallelization using OpenMP" TRUE)
+option(USE_HOMEBREW_FALLBACK "(macOS-only) also look in 'brew --prefix' for libraries (e.g. OpenMP)" TRUE)
 if(WITH_OPENMP)
   find_package(OpenMP COMPONENTS C CXX)
+  if(APPLE AND NOT OpenMP_FOUND)
+    if(USE_HOMEBREW_FALLBACK)
+      # libomp 15.0+ from brew is keg-only, so have to search in other locations.
+      # See https://github.com/Homebrew/homebrew-core/issues/112107#issuecomment-1278042927.
+      execute_process(COMMAND brew --prefix libomp
+                      OUTPUT_VARIABLE HOMEBREW_LIBOMP_PREFIX
+                      OUTPUT_STRIP_TRAILING_WHITESPACE)
+      set(OpenMP_C_FLAGS "-Xpreprocessor -fopenmp -I${HOMEBREW_LIBOMP_PREFIX}/include")
+      set(OpenMP_CXX_FLAGS "-Xpreprocessor -fopenmp -I${HOMEBREW_LIBOMP_PREFIX}/include")
+      set(OpenMP_C_LIB_NAMES omp)
+      set(OpenMP_CXX_LIB_NAMES omp)
+      set(OpenMP_omp_LIBRARY ${HOMEBREW_LIBOMP_PREFIX}/lib/libomp.dylib)
+      find_package(OpenMP COMPONENTS C CXX)
+    endif()
+  endif()
 endif()
 if(OpenMP_FOUND)
   string(APPEND CMAKE_C_FLAGS " ${OpenMP_C_FLAGS}")
@@ -349,26 +368,12 @@ PCL_ADD_GRABBER_DEPENDENCY("DSSDK" "DepthSense SDK support")
 PCL_ADD_GRABBER_DEPENDENCY("RSSDK" "RealSense SDK support")
 PCL_ADD_GRABBER_DEPENDENCY("RSSDK2" "RealSense SDK 2.0 (librealsense) support")
 
-# metslib
-if(PKG_CONFIG_FOUND)
-  pkg_check_modules(METSLIB metslib)
-  if(METSLIB_FOUND)
-    set(HAVE_METSLIB ON)
-    include_directories(SYSTEM ${METSLIB_INCLUDE_DIRS})
-  else()
-    include_directories(SYSTEM "${PCL_SOURCE_DIR}/recognition/include/pcl/recognition/3rdparty/")
-  endif()
-else()
-    include_directories(SYSTEM ${PCL_SOURCE_DIR}/recognition/include/pcl/recognition/3rdparty/)
-endif()
-
 # LibPNG
 option(WITH_PNG "PNG file support" TRUE)
 if(WITH_PNG)
   find_package(PNG)
   if(PNG_FOUND)
     set(HAVE_PNG ON)
-    include_directories(SYSTEM "${PNG_INCLUDE_DIR}")
   endif()
 endif()
 
@@ -381,10 +386,10 @@ if(WITH_QHULL)
   endif()
 endif()
 
-# Cuda
-option(WITH_CUDA "Build NVIDIA-CUDA support" TRUE)
-if(WITH_CUDA)
-  include("${PCL_SOURCE_DIR}/cmake/pcl_find_cuda.cmake")
+# find GLEW before VTK as it uses custom findGLEW that doesn't work with cmakes findGLEW.
+option(WITH_GLEW "Support for GLEW" TRUE)
+if(WITH_GLEW)
+  find_package(GLEW QUIET)
 endif()
 
 
@@ -430,6 +435,31 @@ if(WITH_SYSTEM_ZLIB)
     set(HAVE_ZLIB ON)
   endif()
 endif()
+
+option(WITH_SYSTEM_CJSON "Use system cJSON" TRUE)
+if(WITH_SYSTEM_CJSON)
+  find_package(cJSON)
+  if(cJSON_FOUND)
+    set(HAVE_CJSON ON)
+  else()
+    message(WARNING "It is recommended to install an up-to-date version of cJSON on your system. CMake did not find one, and will instead use a cJSON version bundled with the PCL source code. However, that is an older version which may pose a risk and may be removed in a future PCL release.")
+  endif()
+endif()
+
+set(CMAKE_REQUIRED_LIBRARIES Eigen3::Eigen) # so that Eigen/Core is found below
+CHECK_CXX_SOURCE_COMPILES("
+#include <Eigen/Core>
+#if (EIGEN_DEFAULT_ALIGN_BYTES==0) || EIGEN_MALLOC_ALREADY_ALIGNED
+#error Eigen will not use handmade_aligned_malloc (which is fine, we just throw an error here to make this compilation fail)
+#endif
+int main() { return 0; }"
+PCL_USES_EIGEN_HANDMADE_ALIGNED_MALLOC)
+if (PCL_USES_EIGEN_HANDMADE_ALIGNED_MALLOC) # CHECK_CXX_SOURCE_COMPILES does not necessarily set this to 0 or 1
+  set(PCL_USES_EIGEN_HANDMADE_ALIGNED_MALLOC 1)
+else()
+  set(PCL_USES_EIGEN_HANDMADE_ALIGNED_MALLOC 0)
+endif()
+unset(CMAKE_REQUIRED_LIBRARIES)
 
 ### ---[ Create the config.h file
 set(pcl_config_h_in "${CMAKE_CURRENT_SOURCE_DIR}/pcl_config.h.in")

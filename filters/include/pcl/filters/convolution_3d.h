@@ -40,7 +40,9 @@
 #pragma once
 
 #include <pcl/pcl_base.h>
+#include <pcl/search/search.h> // for pcl::search::Search
 #include <boost/optional.hpp>
+#include <pcl/search/search.h>
 
 namespace pcl
 {
@@ -270,7 +272,7 @@ namespace pcl
         double search_radius_;
 
         /** \brief number of threads */
-        unsigned int threads_;
+        unsigned int threads_{1};
 
         /** \brief convlving kernel */
         KernelT kernel_;

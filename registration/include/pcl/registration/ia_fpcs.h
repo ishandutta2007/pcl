@@ -415,6 +415,7 @@ protected:
    * \param[in] match_indices indices of match M
    * \param[out] correspondences resulting correspondences
    */
+  PCL_DEPRECATED(1, 18, "this function has a bug and is generally not needed")
   virtual void
   linkMatchWithBase(const pcl::Indices& base_indices,
                     pcl::Indices& match_indices,
@@ -427,7 +428,7 @@ protected:
    *
    * \param[in] base_indices indices of base B
    * \param[in] match_indices indices of match M
-   * \param[in] correspondences corresondences between source and target
+   * \param[in] correspondences correspondences between source and target
    * \param[out] transformation resulting transformation matrix
    * \return
    * * < 0 MSE bigger than max_mse_
