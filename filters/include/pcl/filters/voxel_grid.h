@@ -325,7 +325,7 @@ namespace pcl
       inline Eigen::Vector3i
       getMinBoxCoordinates () const { return (min_b_.head<3> ()); }
 
-      /** \brief Get the minimum coordinates of the bounding box (after
+      /** \brief Get the maximum coordinates of the bounding box (after
         * filtering is performed).
         */
       inline Eigen::Vector3i
@@ -645,7 +645,7 @@ namespace pcl
       inline Eigen::Vector3i
       getMinBoxCoordinates () const { return (min_b_.head<3> ()); }
 
-      /** \brief Get the minimum coordinates of the bounding box (after
+      /** \brief Get the maximum coordinates of the bounding box (after
         * filtering is performed).
         */
       inline Eigen::Vector3i
