@@ -48,6 +48,28 @@ namespace pcl {
 
 template <typename PointSource, typename PointTarget, typename FeatureT>
 void
+SampleConsensusInitialAlignment<PointSource, PointTarget, FeatureT>::setNumberOfThreads(
+    unsigned int nr_threads)
+{
+#ifdef _OPENMP
+  if (nr_threads == 0)
+    threads_ = omp_get_num_procs();
+  else
+    threads_ = nr_threads;
+  PCL_DEBUG("[pcl::%s::setNumberOfThreads] Setting number of threads to %u.\n",
+            getClassName().c_str(),
+            threads_);
+#else
+  threads_ = 1;
+  if (nr_threads != 1)
+    PCL_WARN("[pcl::%s::setNumberOfThreads] Parallelization is requested, but OpenMP "
+             "is not available! Continuing without parallelization.\n",
+             getClassName().c_str());
+#endif // _OPENMP
+}
+
+template <typename PointSource, typename PointTarget, typename FeatureT>
+void
 SampleConsensusInitialAlignment<PointSource, PointTarget, FeatureT>::setSourceFeatures(
     const FeatureCloudConstPtr& features)
 {
@@ -172,12 +194,16 @@ SampleConsensusInitialAlignment<PointSource, PointTarget, FeatureT>::computeErro
   std::vector<float> nn_distance(1);
 
   const ErrorFunctor& compute_error = *error_functor_;
+  const auto& tree = tree_;
   float error = 0;
 
-  for (const auto& point : cloud) {
+#pragma omp parallel for default(none) shared(cloud, tree, compute_error)              \
+    firstprivate(nn_index, nn_distance) reduction(+ : error) num_threads(threads_)
+  for (std::ptrdiff_t i = 0; i < static_cast<std::ptrdiff_t>(cloud.size()); ++i) {
+    const auto& point = cloud[static_cast<std::size_t>(i)];
     // Find the distance between point and its nearest neighbor in the target point
     // cloud
-    tree_->nearestKSearch(point, 1, nn_index, nn_distance);
+    tree->nearestKSearch(point, 1, nn_index, nn_distance);
 
     // Compute the error
     error += compute_error(nn_distance[0]);
