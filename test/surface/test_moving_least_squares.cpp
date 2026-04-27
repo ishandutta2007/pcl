@@ -61,6 +61,36 @@ PointCloud<PointNormal>::Ptr cloud_with_normals1 (new PointCloud<PointNormal>);
 search::KdTree<PointXYZ>::Ptr tree3;
 search::KdTree<PointNormal>::Ptr tree4;
 
+TEST(PCL, MovingLeastSquares_almost_on_line)
+{
+  PointCloud<PointXYZ>::Ptr cloud_almost_on_line (new PointCloud<PointXYZ>);
+  cloud_almost_on_line->push_back(pcl::PointXYZ(-89.546, 4.03964, 450.883));
+  cloud_almost_on_line->push_back(pcl::PointXYZ(-88.8728, 4.03964, 450.883));
+  cloud_almost_on_line->push_back(pcl::PointXYZ(-86.8529, 4.03964, 450.883));
+  cloud_almost_on_line->push_back(pcl::PointXYZ(-85.5064, 4.03964, 450.883));
+
+  // Init objects
+  PointCloud<PointXYZ> mls_points;
+  MovingLeastSquares<PointXYZ, PointXYZ> mls;
+
+  // Set parameters
+  mls.setInputCloud(cloud_almost_on_line);
+  mls.setSearchRadius(4.65032);
+  mls.setUpsamplingMethod(MovingLeastSquares<PointXYZ, PointXYZ>::SAMPLE_LOCAL_PLANE);
+  mls.setUpsamplingRadius(0.8);
+  mls.setUpsamplingStepSize(0.4);
+
+  // Reconstruct
+  mls.process(mls_points);
+  ASSERT_FALSE(mls_points.empty());
+
+  for (const auto& mls_point : mls_points)
+  {
+    // Check for NaNs in output
+    EXPECT_TRUE(pcl::isFinite(mls_point));
+  }
+}
+
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 TEST (PCL, MovingLeastSquares)
 {
