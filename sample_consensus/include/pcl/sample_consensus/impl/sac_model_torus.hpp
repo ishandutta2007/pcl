@@ -213,7 +213,11 @@ pcl::SampleConsensusModelTorus<PointT, PointNT>::computeModelCoefficients(
     B << -d.dot(p0), -d.dot(p1), -d.dot(p2), -d.dot(p3);
 
     Eigen::Matrix<float, -1, -1> sol;
+#if EIGEN_VERSION_AT_LEAST(5, 0, 0)
+    sol = A.jacobiSvd<Eigen::ComputeThinU | Eigen::ComputeThinV>().solve(B);
+#else
     sol = A.jacobiSvd(Eigen::ComputeThinU | Eigen::ComputeThinV).solve(B);
+#endif
 
     const float r_min = -sol(0);
     const float D = sol(1);
