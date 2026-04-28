@@ -143,7 +143,7 @@ namespace pcl
               ((field.count == pcl::traits::datatype<PointT, Tag>::size) ||
                (field.count == 0 && pcl::traits::datatype<PointT, Tag>::size == 1))) {
 #define PCL_CAST_POINT_FIELD(TYPE) case ::pcl::traits::asEnum_v<TYPE>: \
-            PCL_WARN("Will try to cast field '%s' (original type is " #TYPE "). You may loose precision during casting. Make sure that this is acceptable or choose a different point type.\n", pcl::traits::name<PointT, Tag>::value); \
+            PCL_WARN("Will try to cast field '%s' (original type is " #TYPE "). You may lose precision during casting. Make sure that this is acceptable or choose a different point type.\n", pcl::traits::name<PointT, Tag>::value); \
             for (std::size_t row = 0; row < msg_.height; ++row) { \
               const std::uint8_t* row_data = msg_data_ + row * msg_.row_step; \
               for (std::size_t col = 0; col < msg_.width; ++col) { \
