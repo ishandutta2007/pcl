@@ -174,7 +174,8 @@ pcl::SampleConsensusModelEllipse3D<PointT>::computeModelCoefficients (const Indi
     .finished();
 
   // Calculate the eigenvalues and eigenvectors of matrix M
-  const Eigen::SelfAdjointEigenSolver<Eigen::Matrix2f> solver_M(M, Eigen::EigenvaluesOnly);
+  Eigen::SelfAdjointEigenSolver<Eigen::Matrix2f> solver_M;
+  solver_M.computeDirect(M, Eigen::EigenvaluesOnly);
 
   Eigen::Vector2f eigvals_M = solver_M.eigenvalues();
 
