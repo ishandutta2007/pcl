@@ -45,3 +45,4 @@
 #include <thrust/copy.h>
 #include <thrust/device_ptr.h>
 #include <thrust/sequence.h>
+#include <thrust/tuple.h>
