@@ -121,7 +121,7 @@ TEST(PCL_OctreeGPU, approxNearesSearch)
                                                   pcl::squaredEuclideanDistance(coords[7], queries[2]) };
 
   for (size_t i = 0; i < queries.size(); ++i) {
-    ASSERT_EQ(dists_pcl[i], dists_gpu[i]);
+    ASSERT_FLOAT_EQ(dists_pcl[i], dists_gpu[i]);
     ASSERT_NEAR(dists_gpu[i], dists_device_downloaded[i], 0.001);
     ASSERT_NEAR(dists_device_downloaded[i], expected_sqr_dists[i], 0.001);
   }
